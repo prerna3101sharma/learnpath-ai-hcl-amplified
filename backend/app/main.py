@@ -5,6 +5,7 @@ from app.core.database import Base, engine
 from app import models
 from app.api.routes.users import router as users_router
 from app.api.routes.courses import router as courses_router
+from app.api.routes.profile import router as profile_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -42,3 +43,4 @@ def health_check():
 
 app.include_router(users_router)
 app.include_router(courses_router)
+app.include_router(profile_router)

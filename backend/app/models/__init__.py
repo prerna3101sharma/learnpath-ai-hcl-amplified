@@ -6,3 +6,4 @@ from app.models.course_skill import CourseSkill
 from app.models.prerequisite import CoursePrerequisite
 from app.models.learning_history import LearningHistory
 from app.models.feedback import Feedback
+from app.models.user_interest import UserInterest
