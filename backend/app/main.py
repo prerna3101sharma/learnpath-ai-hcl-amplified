@@ -10,6 +10,9 @@ from app.api.routes.skill_gap import router as skill_gap_router
 from app.api.routes.recommendations import (
     router as recommendations_router
 )
+from app.api.routes.learning_path import (
+    router as learning_path_router
+)
 Base.metadata.create_all(bind=engine)
 
 
@@ -50,4 +53,8 @@ app.include_router(profile_router)
 app.include_router(skill_gap_router)
 app.include_router(
     recommendations_router
+)
+
+app.include_router(
+    learning_path_router
 )
