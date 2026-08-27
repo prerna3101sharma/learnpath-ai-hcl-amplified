@@ -1,32 +1,73 @@
-import { useEffect, useState } from "react";
-import api from "./api";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+} from "react-router-dom";
+
+import Sidebar from "./components/Sidebar";
+
+import Dashboard from "./pages/Dashboard";
+
+import Profile from "./pages/Profile";
+
+import SkillGaps from "./pages/SkillGaps";
+
+import LearningPathPage from "./pages/LearningPathPage";
+
+import Assistant from "./pages/Assistant";
+
 
 function App() {
-  const [backendStatus, setBackendStatus] = useState("Checking...");
-
-  useEffect(() => {
-    api
-      .get("/api/health")
-      .then((response) => {
-        setBackendStatus(response.data.status);
-      })
-      .catch(() => {
-        setBackendStatus("Backend unavailable");
-      });
-  }, []);
 
   return (
-    <div>
-      <h1>LearnPath AI</h1>
 
-      <p>
-        Personalized Learning Path Recommender
-      </p>
+    <BrowserRouter>
 
-      <p>
-        Backend: {backendStatus}
-      </p>
-    </div>
+      <div className="app">
+
+        <Sidebar />
+
+        <main className="main-content">
+
+          <Routes>
+
+            <Route
+              path="/"
+              element={<Dashboard />}
+            />
+
+            <Route
+              path="/profile"
+              element={<Profile />}
+            />
+
+            <Route
+              path="/skills"
+              element={<SkillGaps />}
+            />
+
+            <Route
+              path="/learning-path"
+              element={
+                <LearningPathPage />
+              }
+            />
+
+            <Route
+              path="/assistant"
+              element={
+                <Assistant />
+              }
+            />
+
+          </Routes>
+
+        </main>
+
+      </div>
+
+    </BrowserRouter>
+
   );
 }
 
