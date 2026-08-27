@@ -13,6 +13,9 @@ from app.api.routes.recommendations import (
 from app.api.routes.learning_path import (
     router as learning_path_router
 )
+from app.api.routes.chat import (
+    router as chat_router
+)
 Base.metadata.create_all(bind=engine)
 
 
@@ -57,4 +60,7 @@ app.include_router(
 
 app.include_router(
     learning_path_router
+)
+app.include_router(
+    chat_router
 )
