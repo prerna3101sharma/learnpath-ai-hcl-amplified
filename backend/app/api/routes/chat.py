@@ -30,7 +30,6 @@ router = APIRouter(
 )
 def chat(
     request: ChatRequest,
-
     db: Session = Depends(get_db)
 ):
 
@@ -57,4 +56,15 @@ def chat(
         raise HTTPException(
             status_code=503,
             detail=str(error)
+        )
+
+    except Exception as error:
+
+        print(
+            f"AI Chat Error: {error}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to process AI request."
         )

@@ -12,9 +12,9 @@ const api = axios.create({
 });
 
 
-// ---------------------------------------------------------
-// Learner Profile
-// ---------------------------------------------------------
+// =========================================================
+// LEARNER PROFILE
+// =========================================================
 
 export const getProfile = async (userId) => {
   const response = await api.get(
@@ -25,9 +25,9 @@ export const getProfile = async (userId) => {
 };
 
 
-// ---------------------------------------------------------
-// Skill Gap
-// ---------------------------------------------------------
+// =========================================================
+// SKILL GAP
+// =========================================================
 
 export const getSkillGaps = async (userId) => {
   const response = await api.get(
@@ -38,9 +38,9 @@ export const getSkillGaps = async (userId) => {
 };
 
 
-// ---------------------------------------------------------
-// Recommendations
-// ---------------------------------------------------------
+// =========================================================
+// RECOMMENDATIONS
+// =========================================================
 
 export const getRecommendations = async (userId) => {
   const response = await api.get(
@@ -51,16 +51,15 @@ export const getRecommendations = async (userId) => {
 };
 
 
-// ---------------------------------------------------------
-// Learning Path
-// ---------------------------------------------------------
+// =========================================================
+// LEARNING PATH
+// =========================================================
 
 export const getLearningPath = async (
   userId,
   weeklyHours = 10,
   maxCourses = 10
 ) => {
-
   const response = await api.get(
     `/api/learning-path/${userId}`,
     {
@@ -75,40 +74,64 @@ export const getLearningPath = async (
 };
 
 
-// ---------------------------------------------------------
-// AI Chat
-// ---------------------------------------------------------
+// =========================================================
+// USERS / LEARNERS
+// =========================================================
 
-export const sendChatMessage = async (
-  userId,
-  message,
-  history = []
-) => {
-
-  const response = await api.post(
-    `/api/chat`,
-    {
-      user_id: userId,
-      message,
-      history,
-    }
+export const getUsers = async () => {
+  const response = await api.get(
+    "/api/users/"
   );
 
   return response.data;
 };
+
+
+// =========================================================
+// GET SINGLE USER
+// =========================================================
+
+export const getUser = async (userId) => {
+  const response = await api.get(
+    `/api/users/${userId}`
+  );
+
+  return response.data;
+};
+
+
+// =========================================================
+// CREATE NEW LEARNER
+// =========================================================
+
+export const createUser = async (userData) => {
+  const response = await api.post(
+    "/api/users/",
+    userData
+  );
+
+  return response.data;
+};
+
+
+// =========================================================
+// UPDATE PROGRESS
+// =========================================================
+
 export const updateProgress = async (
   userId,
   courseId,
   progressPercentage
 ) => {
-
   const response = await api.post(
     "/api/progress",
     {
       user_id: Number(userId),
+
       course_id: Number(courseId),
+
       progress_percentage:
-        Number(progressPercentage)
+        Number(progressPercentage),
     }
   );
 
@@ -116,10 +139,13 @@ export const updateProgress = async (
 };
 
 
+// =========================================================
+// GET USER PROGRESS
+// =========================================================
+
 export const getUserProgress = async (
   userId
 ) => {
-
   const response = await api.get(
     `/api/progress/${userId}`
   );
@@ -128,39 +154,89 @@ export const getUserProgress = async (
 };
 
 
+// =========================================================
+// SUBMIT FEEDBACK
+// =========================================================
+
 export const submitFeedback = async (
   userId,
   courseId,
   feedbackType,
   comment = ""
 ) => {
+  const response = await api.post(
+    "/api/feedback",
+    {
+      user_id: Number(userId),
 
-  const response =
-    await api.post(
-      "/api/feedback",
-      {
-        user_id: userId,
-        course_id: courseId,
-        feedback_type:
-          feedbackType,
-        comment
-      }
-    );
+      course_id: Number(courseId),
 
-  return response.data;
-};
+      feedback_type:
+        feedbackType,
 
-export const getAdaptiveRecommendations = async (userId) => {
-
-  const response = await api.get(
-    `/api/adaptive/${userId}`
+      comment,
+    }
   );
 
   return response.data;
-
 };
-// ============================================================
-// DEFAULT EXPORT
-// ============================================================
+
+
+// =========================================================
+// GET USER FEEDBACK
+// =========================================================
+
+export const getUserFeedback = async (
+  userId
+) => {
+  const response = await api.get(
+    `/api/feedback/${userId}`
+  );
+
+  return response.data;
+};
+
+
+// =========================================================
+// ADAPTIVE RECOMMENDATIONS
+// =========================================================
+
+export const getAdaptiveRecommendations =
+  async (userId) => {
+
+    const response = await api.get(
+      `/api/adaptive/${userId}`
+    );
+
+    return response.data;
+  };
+
+
+// =========================================================
+// AI ASSISTANT
+// =========================================================
+
+export const sendChatMessage = async (
+  userId,
+  message,
+  history = []
+) => {
+
+  const response = await api.post(
+    "/api/chat",
+    {
+      user_id: Number(userId),
+      message: message,
+      history: history,
+    }
+  );
+
+  return response.data;
+};
+
+
+// =========================================================
+// DEFAULT AXIOS INSTANCE
+// =========================================================
 
 export default api;

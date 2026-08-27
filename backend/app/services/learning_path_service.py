@@ -4,7 +4,6 @@ from app.models.user import User
 from app.models.course import Course
 from app.models.skill import Skill
 from app.models.course_skill import CourseSkill
-from app.models.user_skill import UserSkill
 from app.models.learning_history import LearningHistory
 
 from app.services.recommendation_service import (
@@ -14,6 +13,18 @@ from app.services.recommendation_service import (
 from app.services.skill_gap_service import (
     analyze_skill_gap
 )
+
+from app.ai.ollama_service import (
+    chat_with_ollama
+)
+
+import json
+import re
+
+
+# ============================================================
+# DIFFICULTY ORDER
+# ============================================================
 
 DIFFICULTY_ORDER = {
     "Beginner": 1,
@@ -25,6 +36,48 @@ DIFFICULTY_ORDER = {
     "Advanced": 3,
     "Expert": 3
 }
+
+
+# ============================================================
+# SKILL ORDER
+# ============================================================
+
+SKILL_ORDER = {
+
+    "Programming Fundamentals": 1,
+
+    "Python": 2,
+
+    "SQL": 3,
+
+    "Statistics": 3,
+
+    "Data Structures": 4,
+
+    "Algorithms": 5,
+
+    "Data Analysis": 5,
+
+    "Machine Learning": 6,
+
+    "Deep Learning": 7,
+
+    "NLP": 8,
+
+    "Generative AI": 9,
+
+    "React": 5,
+
+    "Java": 4,
+
+    "System Design": 10
+}
+
+
+# ============================================================
+# COURSE SKILLS
+# ============================================================
+
 def get_course_skills(
     db: Session,
     course_id: int
@@ -53,6 +106,11 @@ def get_course_skills(
         for skill in results
     ]
 
+
+# ============================================================
+# COMPLETED COURSES
+# ============================================================
+
 def get_completed_courses(
     db: Session,
     user_id: int
@@ -71,6 +129,11 @@ def get_completed_courses(
         item.course_id
         for item in history
     }
+
+
+# ============================================================
+# COURSE HOURS
+# ============================================================
 
 def get_course_hours(course):
 
@@ -93,6 +156,11 @@ def get_course_hours(course):
         )
 
     return 5.0
+
+
+# ============================================================
+# DEFAULT MILESTONE
+# ============================================================
 
 def get_milestone(
     skill_name: str,
@@ -149,6 +217,11 @@ def get_milestone(
         f"Learning Milestone {sequence}"
     )
 
+
+# ============================================================
+# DEFAULT OBJECTIVES
+# ============================================================
+
 def generate_objective(
     skill_name: str
 ):
@@ -203,6 +276,11 @@ def generate_objective(
         f"Develop practical skills in {skill_name}."
     )
 
+
+# ============================================================
+# FALLBACK REASON
+# ============================================================
+
 def generate_path_reason(
     skill_name: str,
     sequence: int,
@@ -235,36 +313,11 @@ def generate_path_reason(
         f"{skill_name} is included to build "
         "progressive knowledge toward your goal."
     )
-SKILL_ORDER = {
 
-    "Programming Fundamentals": 1,
 
-    "Python": 2,
-
-    "SQL": 3,
-
-    "Statistics": 3,
-
-    "Data Structures": 4,
-
-    "Algorithms": 5,
-
-    "Data Analysis": 5,
-
-    "Machine Learning": 6,
-
-    "Deep Learning": 7,
-
-    "NLP": 8,
-
-    "Generative AI": 9,
-
-    "React": 5,
-
-    "Java": 4,
-
-    "System Design": 10
-}
+# ============================================================
+# SORT COURSES
+# ============================================================
 
 def sort_courses_for_learning(
     recommendations
@@ -272,16 +325,17 @@ def sort_courses_for_learning(
 
     def get_sort_key(item):
 
-        skills = item[
-            "skill_gaps_addressed"
-        ]
+        skills = item.get(
+            "skill_gaps_addressed",
+            []
+        )
 
         if not skills:
 
             return (
                 999,
                 DIFFICULTY_ORDER.get(
-                    item["difficulty"],
+                    item.get("difficulty"),
                     1
                 )
             )
@@ -296,7 +350,7 @@ def sort_courses_for_learning(
 
         difficulty_order = (
             DIFFICULTY_ORDER.get(
-                item["difficulty"],
+                item.get("difficulty"),
                 1
             )
         )
@@ -311,6 +365,153 @@ def sort_courses_for_learning(
         key=get_sort_key
     )
 
+
+# ============================================================
+# AI LEARNING PATH GENERATOR
+# ============================================================
+
+def generate_ai_learning_plan(
+    user,
+    skill_gaps,
+    courses
+):
+
+    course_data = []
+
+    for course in courses:
+
+        course_data.append({
+            "course_id": course["course_id"],
+            "title": course["course_title"],
+            "difficulty": course["difficulty"],
+            "skills": course["skills"]
+        })
+
+    prompt = f"""
+You are an AI learning path planner.
+
+Create a personalized learning roadmap for this learner.
+
+Learner goal:
+{user.goal}
+
+Skill gaps:
+{json.dumps(skill_gaps, indent=2)}
+
+Available courses:
+{json.dumps(course_data, indent=2)}
+
+Rules:
+
+1. Use ONLY the available course IDs.
+2. Do not invent courses.
+3. Prioritize courses that address larger skill gaps.
+4. Respect prerequisite relationships.
+5. Start with foundational skills.
+6. Place advanced topics after prerequisite skills.
+7. Give a meaningful personalized module name.
+8. Give a concise learning objective.
+9. Give a concise reason for the recommendation.
+10. Return valid JSON only.
+
+Return exactly this structure:
+
+{{
+    "modules": [
+        {{
+            "course_id": 1,
+            "module_name": "Python Foundations",
+            "objective": "Build strong Python programming fundamentals.",
+            "reason": "Python is required before progressing to machine learning."
+        }}
+    ]
+}}
+
+Do not include markdown.
+Do not include explanations outside JSON.
+"""
+
+    try:
+
+        response = chat_with_ollama(
+            [
+                {
+                    "role": "system",
+                    "content":
+                        "You are an expert personalized learning path planner."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.2
+        )
+
+        # ----------------------------------------------------
+        # Remove accidental markdown
+        # ----------------------------------------------------
+
+        response = response.strip()
+
+        response = re.sub(
+            r"^```json",
+            "",
+            response,
+            flags=re.IGNORECASE
+        )
+
+        response = re.sub(
+            r"^```",
+            "",
+            response
+        )
+
+        response = re.sub(
+            r"```$",
+            "",
+            response
+        )
+
+        response = response.strip()
+
+        ai_data = json.loads(response)
+
+        if not isinstance(
+            ai_data,
+            dict
+        ):
+
+            return None
+
+        modules = ai_data.get(
+            "modules",
+            []
+        )
+
+        if not isinstance(
+            modules,
+            list
+        ):
+
+            return None
+
+        return modules
+
+    except Exception as error:
+
+        print(
+            "AI learning path generation failed:",
+            error
+        )
+
+        return None
+
+
+# ============================================================
+# MAIN LEARNING PATH
+# ============================================================
+
 def generate_learning_path(
     db: Session,
     user_id: int,
@@ -319,7 +520,7 @@ def generate_learning_path(
 ):
 
     # ========================================================
-    # 1. Find learner
+    # 1. USER
     # ========================================================
 
     user = (
@@ -334,8 +535,9 @@ def generate_learning_path(
 
         return None
 
+
     # ========================================================
-    # 2. Skill-gap analysis
+    # 2. SKILL GAP
     # ========================================================
 
     gap_analysis = analyze_skill_gap(
@@ -347,8 +549,15 @@ def generate_learning_path(
 
         return None
 
+
+    skill_gaps = gap_analysis.get(
+        "skill_gaps",
+        []
+    )
+
+
     # ========================================================
-    # 3. Get recommendations
+    # 3. RECOMMENDATIONS
     # ========================================================
 
     recommendation_result = (
@@ -363,14 +572,17 @@ def generate_learning_path(
 
         return None
 
+
     recommendations = (
-        recommendation_result[
-            "recommendations"
-        ]
+        recommendation_result.get(
+            "recommendations",
+            []
+        )
     )
 
+
     # ========================================================
-    # 4. Sort for learning sequence
+    # 4. SORT
     # ========================================================
 
     recommendations = (
@@ -379,8 +591,9 @@ def generate_learning_path(
         )
     )
 
+
     # ========================================================
-    # 5. Completed courses
+    # 5. COMPLETED
     # ========================================================
 
     completed_courses = (
@@ -390,36 +603,22 @@ def generate_learning_path(
         )
     )
 
-    # ========================================================
-    # 6. Build gap map
-    # ========================================================
-
-    gap_map = {
-        item["skill_name"]: item
-        for item in gap_analysis[
-            "skill_gaps"
-        ]
-    }
 
     # ========================================================
-    # 7. Build path
+    # 6. PREPARE COURSES FOR AI
     # ========================================================
 
-    path_items = []
-
-    total_hours = 0
-
-    sequence = 1
+    candidate_courses = []
 
     for recommendation in recommendations:
 
-        if len(path_items) >= max_courses:
-
-            break
-
-        course_id = (
-            recommendation["course_id"]
+        course_id = recommendation.get(
+            "course_id"
         )
+
+        if not course_id:
+
+            continue
 
         course = (
             db.query(Course)
@@ -433,37 +632,178 @@ def generate_learning_path(
 
             continue
 
-        # ----------------------------------------------------
-        # Skills addressed
-        # ----------------------------------------------------
-
-        skills = recommendation[
-            "skill_gaps_addressed"
-        ]
+        skills = recommendation.get(
+            "skill_gaps_addressed",
+            []
+        )
 
         if not skills:
 
             continue
 
-        # ----------------------------------------------------
-        # Choose primary skill
-        # ----------------------------------------------------
+        candidate_courses.append({
+            "course_id": course.id,
 
-        primary_skill = min(
-            skills,
-            key=lambda skill:
-                SKILL_ORDER.get(
-                    skill,
-                    999
-                )
+            "course_title":
+                course.title,
+
+            "difficulty":
+                course.difficulty,
+
+            "skills":
+                skills
+        })
+
+
+    # ========================================================
+    # 7. ASK AI TO CREATE LEARNING PATH
+    # ========================================================
+
+    ai_modules = generate_ai_learning_plan(
+        user=user,
+        skill_gaps=skill_gaps,
+        courses=candidate_courses[:50]
+    )
+
+
+    # ========================================================
+    # 8. FALLBACK
+    # ========================================================
+
+    if not ai_modules:
+
+        ai_modules = [
+            {
+                "course_id":
+                    item["course_id"],
+
+                "module_name":
+                    get_milestone(
+                        item["skills"][0],
+                        index + 1
+                    ),
+
+                "objective":
+                    generate_objective(
+                        item["skills"][0]
+                    ),
+
+                "reason":
+                    generate_path_reason(
+                        item["skills"][0],
+                        index + 1,
+                        0
+                    )
+            }
+
+            for index, item
+            in enumerate(
+                candidate_courses[:max_courses]
+            )
+        ]
+
+
+    # ========================================================
+    # 9. CREATE COURSE LOOKUP
+    # ========================================================
+
+    course_lookup = {
+        item["course_id"]: item
+        for item in candidate_courses
+    }
+
+
+    # ========================================================
+    # 10. BUILD FINAL PATH
+    # ========================================================
+
+    path_items = []
+
+    total_hours = 0
+
+    sequence = 1
+
+    used_courses = set()
+
+
+    for module in ai_modules:
+
+        if len(path_items) >= max_courses:
+
+            break
+
+        course_id = module.get(
+            "course_id"
         )
 
+        if not course_id:
+
+            continue
+
+        if course_id in used_courses:
+
+            continue
+
+        course_info = course_lookup.get(
+            course_id
+        )
+
+        if not course_info:
+
+            continue
+
+        course = (
+            db.query(Course)
+            .filter(
+                Course.id == course_id
+            )
+            .first()
+        )
+
+        if not course:
+
+            continue
+
+        used_courses.add(
+            course_id
+        )
+
+
         # ----------------------------------------------------
-        # Gap information
+        # Skills
         # ----------------------------------------------------
 
-        gap_item = gap_map.get(
-            primary_skill,
+        skills = course_info.get(
+            "skills",
+            []
+        )
+
+        primary_skill = (
+            min(
+                skills,
+                key=lambda skill:
+                    SKILL_ORDER.get(
+                        skill,
+                        999
+                    )
+            )
+            if skills
+            else "General"
+        )
+
+
+        # ----------------------------------------------------
+        # Gap
+        # ----------------------------------------------------
+
+        gap_item = next(
+            (
+                item
+                for item in skill_gaps
+                if item.get(
+                    "skill_name"
+                ) == primary_skill
+            ),
             {}
         )
 
@@ -472,8 +812,9 @@ def generate_learning_path(
             0
         )
 
+
         # ----------------------------------------------------
-        # Course hours
+        # Hours
         # ----------------------------------------------------
 
         hours = get_course_hours(
@@ -482,42 +823,19 @@ def generate_learning_path(
 
         total_hours += hours
 
-        # ----------------------------------------------------
-        # Milestone
-        # ----------------------------------------------------
-
-        milestone = get_milestone(
-            primary_skill,
-            sequence
-        )
-
-        # ----------------------------------------------------
-        # Objective
-        # ----------------------------------------------------
-
-        objective = generate_objective(
-            primary_skill
-        )
-
-        # ----------------------------------------------------
-        # Reason
-        # ----------------------------------------------------
-
-        reason = generate_path_reason(
-            primary_skill,
-            sequence,
-            gap
-        )
 
         # ----------------------------------------------------
         # Status
         # ----------------------------------------------------
 
-        if course.id in completed_courses:
+        if course_id in completed_courses:
 
             status = "Completed"
 
-        elif sequence == 1:
+        elif not any(
+            item["status"] == "Next"
+            for item in path_items
+        ):
 
             status = "Next"
 
@@ -525,46 +843,83 @@ def generate_learning_path(
 
             status = "Upcoming"
 
+
         # ----------------------------------------------------
-        # Add item
+        # AI CONTENT
         # ----------------------------------------------------
 
-        path_items.append(
-            {
-                "sequence": sequence,
-
-                "course_id": course.id,
-
-                "course_title":
-                    course.title,
-
-                "skill_name":
-                    primary_skill,
-
-                "difficulty":
-                    course.difficulty,
-
-                "estimated_hours":
-                    hours,
-
-                "milestone":
-                    milestone,
-
-                "objective":
-                    objective,
-
-                "reason":
-                    reason,
-
-                "status":
-                    status
-            }
+        module_name = module.get(
+            "module_name"
+        ) or get_milestone(
+            primary_skill,
+            sequence
         )
+
+        objective = module.get(
+            "objective"
+        ) or generate_objective(
+            primary_skill
+        )
+
+        reason = module.get(
+            "reason"
+        ) or generate_path_reason(
+            primary_skill,
+            sequence,
+            gap
+        )
+
+
+        # ----------------------------------------------------
+        # ADD PATH ITEM
+        # ----------------------------------------------------
+
+        path_items.append({
+
+            "sequence":
+                sequence,
+
+            "course_id":
+                course.id,
+
+            "course_title":
+                course.title,
+
+            "module_name":
+                module_name,
+
+            "skill_name":
+                primary_skill,
+
+            "difficulty":
+                course.difficulty,
+
+            "estimated_hours":
+                hours,
+
+            "milestone":
+                module_name,
+
+            "objective":
+                objective,
+
+            "reason":
+                reason,
+
+            "status":
+                status,
+
+            "progress_percentage":
+                100
+                if course_id in completed_courses
+                else 0
+        })
 
         sequence += 1
 
+
     # ========================================================
-    # 8. Estimate weeks
+    # 11. WEEKS
     # ========================================================
 
     if weekly_hours <= 0:
@@ -579,9 +934,14 @@ def generate_learning_path(
         )
     )
 
+
     # ========================================================
-    # 9. Progress
+    # 12. PROGRESS
     # ========================================================
+
+    total_courses = len(
+        path_items
+    )
 
     completed_count = sum(
         1
@@ -589,16 +949,13 @@ def generate_learning_path(
         if item["status"] == "Completed"
     )
 
-    total_courses = len(
-        path_items
-    )
-
     if total_courses > 0:
 
         progress_percentage = round(
             (
                 completed_count
-                / total_courses
+                /
+                total_courses
             ) * 100,
             2
         )
@@ -607,8 +964,9 @@ def generate_learning_path(
 
         progress_percentage = 0
 
+
     # ========================================================
-    # 10. Current milestone
+    # 13. CURRENT MILESTONE
     # ========================================================
 
     current_milestone = None
@@ -618,25 +976,32 @@ def generate_learning_path(
         if item["status"] != "Completed":
 
             current_milestone = (
-                item["milestone"]
+                item["module_name"]
             )
 
             break
 
+
     # ========================================================
-    # 11. Return
+    # 14. RETURN
     # ========================================================
 
     return {
-        "user_id": user.id,
 
-        "goal": user.goal,
+        "user_id":
+            user.id,
+
+        "goal":
+            user.goal,
 
         "total_courses":
             total_courses,
 
         "total_hours":
-            round(total_hours, 2),
+            round(
+                total_hours,
+                2
+            ),
 
         "estimated_weeks":
             estimated_weeks,

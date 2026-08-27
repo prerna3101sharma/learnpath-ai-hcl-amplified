@@ -27,12 +27,12 @@ def chat_with_ollama(
             }
         )
 
-        return response.message.content
+        return response["message"]["content"]
 
     except ResponseError as error:
 
         raise RuntimeError(
-            f"Ollama error: {error.error}"
+            f"Ollama model error: {error.error}"
         )
 
     except Exception as error:

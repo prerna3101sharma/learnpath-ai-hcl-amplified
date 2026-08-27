@@ -31,6 +31,10 @@ class FeedbackRequest(BaseModel):
     comment: str | None = None
 
 
+# ============================================================
+# SUBMIT FEEDBACK
+# ============================================================
+
 @router.post("")
 def submit_feedback(
     request: FeedbackRequest,
@@ -43,20 +47,17 @@ def submit_feedback(
 
         course_id=request.course_id,
 
-        feedback_type=
-            request.feedback_type,
+        feedback_type=request.feedback_type,
 
         comment=request.comment
 
     )
-
 
     db.add(feedback)
 
     db.commit()
 
     db.refresh(feedback)
-
 
     return {
 
@@ -70,3 +71,47 @@ def submit_feedback(
             feedback.feedback_type
 
     }
+
+
+# ============================================================
+# GET USER FEEDBACK
+# ============================================================
+
+@router.get("/{user_id}")
+def get_user_feedback(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+
+    records = (
+        db.query(LearningFeedback)
+        .filter(
+            LearningFeedback.user_id == user_id
+        )
+        .order_by(
+            LearningFeedback.created_at.desc()
+        )
+        .all()
+    )
+
+    return [
+        {
+            "id": record.id,
+
+            "user_id":
+                record.user_id,
+
+            "course_id":
+                record.course_id,
+
+            "feedback_type":
+                record.feedback_type,
+
+            "comment":
+                record.comment,
+
+            "created_at":
+                record.created_at
+        }
+        for record in records
+    ]

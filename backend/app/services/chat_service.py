@@ -2,9 +2,7 @@ import os
 
 from sqlalchemy.orm import Session
 
-from app.ai.ollama_service import (
-    chat_with_ollama
-)
+from app.ai.ollama_service import chat_with_ollama
 from app.core.config import settings
 
 from app.ai.prompts import (
@@ -19,7 +17,7 @@ from app.services.ai_context_service import (
 
 OLLAMA_MODEL = os.getenv(
     "OLLAMA_MODEL",
-    "qwen3:8b"
+    getattr(settings, "ollama_model", "gemma3:4b")
 )
 
 
@@ -40,7 +38,6 @@ def generate_ai_response(
     )
 
     if context is None:
-
         raise ValueError(
             "Learner not found"
         )
@@ -59,7 +56,6 @@ def generate_ai_response(
     # ========================================================
 
     messages = [
-
         {
             "role": "system",
             "content": SYSTEM_PROMPT
@@ -74,17 +70,28 @@ def generate_ai_response(
 
         for item in history[-10:]:
 
-            if item.role not in [
-                "user",
-                "assistant"
-            ]:
+            # Support both Pydantic objects and dictionaries
+            if hasattr(item, "role"):
+                role = item.role
+                content = item.content
 
+            elif isinstance(item, dict):
+                role = item.get("role")
+                content = item.get("content")
+
+            else:
+                continue
+
+            if role not in ["user", "assistant"]:
+                continue
+
+            if not content:
                 continue
 
             messages.append(
                 {
-                    "role": item.role,
-                    "content": item.content
+                    "role": role,
+                    "content": content
                 }
             )
 
@@ -104,13 +111,16 @@ def generate_ai_response(
     # ========================================================
 
     response = chat_with_ollama(
-        messages
+        messages=messages,
+        temperature=0.4
     )
 
+    # ========================================================
+    # 7. Return response
+    # ========================================================
+
     return {
-        "user_id": user_id,
-
+        "user_id": int(user_id),
         "message": response,
-
-        "model": settings.ollama_model
+        "model": OLLAMA_MODEL
     }

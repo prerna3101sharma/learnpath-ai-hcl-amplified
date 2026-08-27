@@ -2,50 +2,58 @@ import {
   createContext,
   useContext,
   useEffect,
-  useState
+  useState,
 } from "react";
 
-import axios from "axios";
+const UserContext = createContext(null);
+
+export function UserProvider({ children }) {
+
+  const [user, setUserState] = useState(() => {
+
+    const savedUser =
+      localStorage.getItem(
+        "learnpath_user"
+      );
+
+    if (!savedUser) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(savedUser);
+    } catch {
+      return null;
+    }
+
+  });
 
 
-const UserContext =
-  createContext(null);
+  const setUser = (newUser) => {
 
+    setUserState(newUser);
 
-export function UserProvider({
-  children
-}) {
+    if (newUser) {
 
-  const [user, setUser] =
-    useState(() => {
+      localStorage.setItem(
+        "learnpath_user",
+        JSON.stringify(newUser)
+      );
 
-      const saved =
-        localStorage.getItem(
-          "learnpath_user"
-        );
+    } else {
 
-      return saved
-        ? JSON.parse(saved)
-        : null;
+      localStorage.removeItem(
+        "learnpath_user"
+      );
 
-    });
-
-
-  const loginUser = (selectedUser) => {
-
-    setUser(selectedUser);
-
-    localStorage.setItem(
-      "learnpath_user",
-      JSON.stringify(selectedUser)
-    );
+    }
 
   };
 
 
-  const logoutUser = () => {
+  const logout = () => {
 
-    setUser(null);
+    setUserState(null);
 
     localStorage.removeItem(
       "learnpath_user"
@@ -55,28 +63,29 @@ export function UserProvider({
 
 
   return (
-
     <UserContext.Provider
       value={{
         user,
-        loginUser,
-        logoutUser
+        setUser,
+        logout,
       }}
     >
-
       {children}
-
     </UserContext.Provider>
-
   );
-
 }
 
 
 export function useUser() {
 
-  return useContext(
-    UserContext
-  );
+  const context =
+    useContext(UserContext);
 
+  if (!context) {
+    throw new Error(
+      "useUser must be used inside UserProvider"
+    );
+  }
+
+  return context;
 }

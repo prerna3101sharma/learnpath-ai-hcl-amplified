@@ -5,42 +5,35 @@ import {
   Route,
   MessageCircle,
   GraduationCap,
-} from "lucide-react";
-
-import { NavLink } from "react-router-dom";
-
-import {
-  LogOut
+  LogOut,
 } from "lucide-react";
 
 import {
-  useUser
-} from "../context/UserContext";
-
-import {
-  useNavigate
+  NavLink,
+  useNavigate,
 } from "react-router-dom";
 
+import { useUser } from "../context/UserContext";
+
+
 function Sidebar() {
-   const {
-  user,
-  logoutUser
-} = useUser();
+  const { user, logout } = useUser();
 
-const navigate =
-  useNavigate();
+  const navigate = useNavigate();
 
 
-const handleLogout = () => {
+  const handleLogout = () => {
+    // Clear currently logged-in learner
+    logout();
 
-  logoutUser();
+    // Redirect to login page
+    navigate("/login", {
+      replace: true,
+    });
+  };
 
-  navigate("/login");
-
-};
 
   const menuItems = [
-
     {
       name: "Dashboard",
       path: "/",
@@ -70,14 +63,13 @@ const handleLogout = () => {
       path: "/assistant",
       icon: MessageCircle,
     },
-
   ];
 
 
   return (
-
     <aside className="sidebar">
 
+      {/* LOGO */}
       <div className="logo">
 
         <div className="logo-icon">
@@ -92,50 +84,54 @@ const handleLogout = () => {
       </div>
 
 
+      {/* NAVIGATION */}
       <nav>
 
         {menuItems.map((item) => {
-
           const Icon = item.icon;
 
           return (
-
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
                 `nav-item ${
-                  isActive
-                    ? "active"
-                    : ""
+                  isActive ? "active" : ""
                 }`
               }
             >
-
               <Icon size={20} />
 
               <span>
                 {item.name}
               </span>
-
             </NavLink>
-
           );
-
         })}
 
       </nav>
 
-        <button
+
+      {/* LOGOUT */}
+      <button
+        type="button"
         className="logout-button"
         onClick={handleLogout}
-        >
+      >
         <LogOut size={18} />
-        Logout
-        </button>
+
+        <span>
+          Logout
+        </span>
+      </button>
+
+
+      {/* FOOTER */}
       <div className="sidebar-footer">
 
-        <p>AI-Powered</p>
+        <p>
+          AI-Powered
+        </p>
 
         <span>
           Personalized Learning
@@ -144,8 +140,8 @@ const handleLogout = () => {
       </div>
 
     </aside>
-
   );
 }
+
 
 export default Sidebar;

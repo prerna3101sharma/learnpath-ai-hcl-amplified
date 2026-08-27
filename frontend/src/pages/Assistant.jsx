@@ -150,7 +150,7 @@ function Assistant() {
 
       const response =
         await fetch(
-          "http://localhost:8000/api/assistant/chat",
+          "http://localhost:8000/api/chat",
           {
             method:
               "POST",

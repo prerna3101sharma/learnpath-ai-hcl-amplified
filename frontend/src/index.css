@@ -552,155 +552,565 @@ button {
 }
 
 
-/* =====================================================
+/* =========================================================
    LEARNING PATH
-===================================================== */
+========================================================= */
 
-.path-card {
+.learning-path-section {
+  margin-top: 56px;
+  padding-bottom: 60px;
+}
+
+.learning-path-header {
+  margin-bottom: 28px;
+}
+
+.learning-path-eyebrow {
+  display: block;
+  margin-bottom: 10px;
+  color: #635bff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.learning-path-header h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 750;
+}
+
+.learning-path-header p {
+  margin: 12px 0 0;
+  color: #7b8498;
+  font-size: 16px;
+}
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+.learning-path-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.path-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px;
+  background: #ffffff;
+  border: 1px solid #e8eaf0;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(20, 30, 50, 0.04);
+}
+
+.summary-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #f1f3ff;
+  color: #635bff;
+}
+
+.path-summary-card span {
+  display: block;
+  margin-bottom: 5px;
+  color: #7b8498;
+  font-size: 13px;
+}
+
+.path-summary-card strong {
+  display: block;
+  color: #172033;
+  font-size: 24px;
+}
+
+
+/* =========================================================
+   OVERALL PROGRESS
+========================================================= */
+
+.overall-progress-card {
+  padding: 22px;
+  margin-bottom: 30px;
+  background: #ffffff;
+  border: 1px solid #e8eaf0;
+  border-radius: 16px;
+}
+
+.progress-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  color: #718096;
+  font-size: 14px;
+}
+
+.progress-heading strong {
+  color: #172033;
+  font-size: 15px;
+}
+
+.progress-track,
+.module-progress-track {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  background: #e5e7eb;
+  border-radius: 20px;
+}
+
+.progress-fill,
+.module-progress-fill {
+  height: 100%;
+  background: #635bff;
+  border-radius: 20px;
+  transition: width 0.4s ease;
+}
+
+
+/* =========================================================
+   TIMELINE
+========================================================= */
+
+.learning-path-timeline {
+  position: relative;
+  padding-left: 42px;
+}
+
+.learning-path-timeline::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  left: 11px;
+  width: 2px;
+  background: #e1e4eb;
+}
+
+.learning-module-wrapper {
+  position: relative;
   margin-bottom: 24px;
 }
 
-
-.timeline {
-  position: relative;
-}
-
-
-.timeline::before {
-  content: "";
-
+.timeline-node {
   position: absolute;
-
-  left: 12px;
-
-  top: 12px;
-
-  bottom: 12px;
-
-  width: 2px;
-
-  background: #e5e7eb;
-}
-
-
-.timeline-item {
-  display: flex;
-
-  gap: 18px;
-
-  position: relative;
-
-  padding-bottom: 28px;
-}
-
-
-.timeline-item:last-child {
-  padding-bottom: 0;
-}
-
-
-.timeline-icon {
-  width: 26px;
-  height: 26px;
-
-  background: white;
-
-  position: relative;
-
   z-index: 2;
+  top: 20px;
+  left: -42px;
+
+  width: 24px;
+  height: 24px;
 
   display: flex;
-
   align-items: center;
-
   justify-content: center;
 
-  color: #6366f1;
+  background: #f7f8fc;
+  color: #172033;
+}
+
+.learning-module-wrapper.next .timeline-node {
+  color: #635bff;
+}
+
+.learning-module-wrapper.completed .timeline-node {
+  color: #16a34a;
 }
 
 
-.timeline-content {
-  flex: 1;
+/* =========================================================
+   MODULE CARD
+========================================================= */
 
-  padding-bottom: 8px;
+.learning-module-card {
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e5e7ed;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(20, 30, 50, 0.04);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
+.learning-module-card:hover {
+  box-shadow: 0 8px 28px rgba(20, 30, 50, 0.08);
+}
 
-.timeline-top {
+.learning-module-wrapper.next
+.learning-module-card {
+  border-color: #d9d6ff;
+}
+
+.learning-module-header {
+  width: 100%;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
 
+  padding: 24px;
+
+  border: 0;
+  background: transparent;
+
+  text-align: left;
+  cursor: pointer;
+}
+
+.module-left {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.module-number {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+  background: #f1f3f6;
+
+  color: #172033;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.learning-module-wrapper.next
+.module-number {
+  background: #ecebff;
+  color: #635bff;
+}
+
+.learning-module-wrapper.completed
+.module-number {
+  background: #eaf8ef;
+  color: #15803d;
+}
+
+.module-title-area {
+  min-width: 0;
+}
+
+.module-badges {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
 
+.module-status,
+.difficulty-badge {
+  display: inline-flex;
   align-items: center;
 
-  margin-bottom: 6px;
-}
-
-
-.next-tag {
-  font-size: 9px;
-
-  font-weight: 700;
-
-  color: white;
-
-  background: #6366f1;
-
-  padding:
-    4px
-    6px;
-
-  border-radius: 4px;
-}
-
-
-.timeline-content h4 {
-  margin:
-    0
-    0
-    6px;
-
-  font-size: 16px;
-
-  color: #111827;
-}
-
-
-.timeline-content p {
-  margin: 0;
-
-  color: #6b7280;
-
-  font-size: 13px;
-
-  line-height: 1.5;
-}
-
-
-.recommendation-reason {
-  display: flex;
-
-  gap: 6px;
-
-  margin-top: 10px;
-
-  font-size: 12px;
-
-  color: #6b7280;
-
-  background: #f9fafb;
-
-  padding: 10px;
+  padding: 5px 9px;
 
   border-radius: 8px;
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.module-status.next {
+  color: #4f46e5;
+  background: #eef0ff;
+}
+
+.module-status.completed {
+  color: #15803d;
+  background: #eaf8ef;
+}
+
+.module-status.upcoming {
+  color: #596275;
+  background: #f1f3f6;
+}
+
+.difficulty-badge {
+  color: #596275;
+  background: #f3f4f6;
+}
+
+.module-title-area h3 {
+  margin: 0;
+
+  color: #172033;
+  font-size: 20px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.module-milestone {
+  margin: 6px 0 0;
+  color: #8991a2;
+  font-size: 13px;
+}
+
+.module-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  color: #8790a1;
 }
 
 
-.recommendation-reason strong {
-  color: #374151;
+/* =========================================================
+   MODULE CONTENT
+========================================================= */
+
+.learning-module-content {
+  padding: 0 24px 24px 74px;
+  border-top: 1px solid #eef0f4;
+}
+
+.module-detail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 18px 0;
+
+  border-bottom: 1px solid #eef0f4;
+}
+
+.detail-icon {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+  background: #f1f3ff;
+  color: #635bff;
+}
+
+.module-detail span,
+.module-objective span,
+.module-reason span {
+  display: block;
+  margin-bottom: 5px;
+
+  color: #8991a2;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.module-detail strong {
+  color: #172033;
+  font-size: 14px;
+}
+
+.module-objective,
+.module-reason {
+  padding: 18px 0;
+}
+
+.module-objective p,
+.module-reason p {
+  margin: 0;
+
+  color: #5f687b;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 
+/* =========================================================
+   META
+========================================================= */
+
+.module-meta {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+
+  padding: 15px 0;
+
+  color: #697386;
+  font-size: 13px;
+}
+
+.module-meta div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+
+/* =========================================================
+   MODULE PROGRESS
+========================================================= */
+
+.module-progress {
+  margin-top: 8px;
+}
+
+.module-progress-heading {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+
+  color: #697386;
+  font-size: 13px;
+}
+
+.module-progress-heading strong {
+  color: #172033;
+}
+
+
+/* =========================================================
+   CONTINUE BUTTON
+========================================================= */
+
+.continue-learning-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  margin-top: 20px;
+  padding: 11px 18px;
+
+  border: 0;
+  border-radius: 9px;
+
+  background: #5146e5;
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.continue-learning-btn:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(79, 70, 229, 0.25);
+}
+
+.continue-learning-btn span {
+  font-size: 17px;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.learning-path-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 220px;
+  padding: 40px;
+
+  background: #ffffff;
+  border: 1px solid #e5e7ed;
+  border-radius: 16px;
+
+  text-align: center;
+  color: #8991a2;
+}
+
+.learning-path-empty svg {
+  margin-bottom: 12px;
+  color: #635bff;
+}
+
+.learning-path-empty h3 {
+  margin: 0 0 8px;
+  color: #172033;
+}
+
+.learning-path-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+
+  .learning-path-summary {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+@media (max-width: 650px) {
+
+  .learning-path-section {
+    margin-top: 35px;
+  }
+
+  .learning-path-header h2 {
+    font-size: 26px;
+  }
+
+  .learning-path-timeline {
+    padding-left: 30px;
+  }
+
+  .learning-path-timeline::before {
+    left: 7px;
+  }
+
+  .timeline-node {
+    left: -30px;
+  }
+
+  .learning-module-header {
+    padding: 18px;
+  }
+
+  .learning-module-content {
+    padding: 0 18px 20px 18px;
+  }
+
+  .module-title-area h3 {
+    font-size: 17px;
+  }
+
+}
 /* =====================================================
    CHATBOT
 ===================================================== */
