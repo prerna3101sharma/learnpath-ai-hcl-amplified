@@ -15,7 +15,7 @@ import SkillGaps from "./pages/SkillGaps";
 import LearningPathPage from "./pages/LearningPathPage";
 
 import Assistant from "./pages/Assistant";
-
+import Login from "./pages/Login";
 
 function App() {
 
@@ -59,7 +59,10 @@ function App() {
                 <Assistant />
               }
             />
-
+            <Route
+              path="/login"
+              element={<Login />}
+            />
           </Routes>
 
         </main>

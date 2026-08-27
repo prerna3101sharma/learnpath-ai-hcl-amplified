@@ -1,6 +1,7 @@
 from sqlalchemy import (
     Column,
     Integer,
+    Float,
     String,
     DateTime,
     ForeignKey
@@ -11,13 +12,14 @@ from datetime import datetime
 from app.core.database import Base
 
 
-class LearningFeedback(Base):
+class LearningProgress(Base):
 
-    __tablename__ = "learning_feedback"
+    __tablename__ = "learning_progress"
 
     id = Column(
         Integer,
-        primary_key=True
+        primary_key=True,
+        index=True
     )
 
     user_id = Column(
@@ -32,17 +34,23 @@ class LearningFeedback(Base):
         nullable=False
     )
 
-    feedback_type = Column(
-        String,
-        nullable=False
+    progress_percentage = Column(
+        Float,
+        default=0
     )
 
-    comment = Column(
+    status = Column(
+        String,
+        default="Not Started"
+    )
+
+    feedback = Column(
         String,
         nullable=True
     )
 
-    created_at = Column(
+    updated_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
     )

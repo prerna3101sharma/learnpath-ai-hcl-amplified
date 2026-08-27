@@ -13,8 +13,9 @@ import {
   getProfile,
 } from "../services/api";
 
-
-const USER_ID = 1;
+import {
+  useUser,
+} from "../context/UserContext";
 
 
 function Profile() {
@@ -22,14 +23,35 @@ function Profile() {
   const [profile, setProfile] =
     useState(null);
 
+  const {
+    user
+  } = useUser();
+
+  const USER_ID = user?.id;
+
 
   useEffect(() => {
+
+    if (!USER_ID) {
+      return;
+    }
 
     getProfile(USER_ID)
       .then(setProfile)
       .catch(console.error);
 
-  }, []);
+  }, [USER_ID]);
+
+
+  if (!user) {
+
+    return (
+      <div className="loading">
+        Please select a learner first...
+      </div>
+    );
+
+  }
 
 
   if (!profile) {
@@ -73,8 +95,7 @@ function Profile() {
           </div>
 
           <h2>
-            {profile.name ||
-              "Learner"}
+            {profile.name || "Learner"}
           </h2>
 
           <p>
@@ -133,6 +154,7 @@ function Profile() {
     </div>
 
   );
+
 }
 
 export default Profile;

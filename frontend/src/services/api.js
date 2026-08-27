@@ -96,3 +96,45 @@ export const sendChatMessage = async (
 
   return response.data;
 };
+export const updateProgress = async (
+  userId,
+  courseId,
+  progressPercentage
+) => {
+
+  const response =
+    await api.post(
+      "/api/progress",
+      {
+        user_id: userId,
+        course_id: courseId,
+        progress_percentage:
+          progressPercentage
+      }
+    );
+
+  return response.data;
+};
+
+
+export const submitFeedback = async (
+  userId,
+  courseId,
+  feedbackType,
+  comment = ""
+) => {
+
+  const response =
+    await api.post(
+      "/api/feedback",
+      {
+        user_id: userId,
+        course_id: courseId,
+        feedback_type:
+          feedbackType,
+        comment
+      }
+    );
+
+  return response.data;
+};

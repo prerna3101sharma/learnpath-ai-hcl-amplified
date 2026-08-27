@@ -9,8 +9,9 @@ import {
 
 import LearningPath from "../components/LearningPath";
 
-
-const USER_ID = 1;
+import {
+  useUser,
+} from "../context/UserContext";
 
 
 function LearningPathPage() {
@@ -18,8 +19,18 @@ function LearningPathPage() {
   const [path, setPath] =
     useState(null);
 
+  const {
+    user
+  } = useUser();
+
+  const USER_ID = user?.id;
+
 
   useEffect(() => {
+
+    if (!USER_ID) {
+      return;
+    }
 
     getLearningPath(
       USER_ID,
@@ -30,7 +41,16 @@ function LearningPathPage() {
       .catch(console.error);
 
   }, []);
+  
+  if (!user) {
 
+    return (
+      <div className="loading">
+        Please select a learner first...
+      </div>
+    );
+
+  }
 
   if (!path) {
 

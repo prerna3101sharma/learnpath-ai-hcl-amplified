@@ -9,24 +9,42 @@ import {
 
 import SkillGapChart from "../components/SkillGapChart";
 
-
-const USER_ID = 1;
+import {
+  useUser,
+} from "../context/UserContext";
 
 
 function SkillGaps() {
 
   const [data, setData] =
     useState(null);
+  const {
+    user
+  } = useUser();
+
+  const USER_ID = user?.id;
 
 
-  useEffect(() => {
+    useEffect(() => {
+
+    if (!USER_ID) {
+      return;
+    }
 
     getSkillGaps(USER_ID)
       .then(setData)
       .catch(console.error);
 
-  }, []);
+  }, [USER_ID]);
+  if (!user) {
 
+    return (
+      <div className="loading">
+        Please select a learner first...
+      </div>
+    );
+
+  }
 
   if (!data) {
 

@@ -16,7 +16,9 @@ import {
   getSkillGaps,
   getLearningPath,
 } from "../services/api";
-
+import {
+  useNavigate
+} from "react-router-dom";
 import StatCard from "../components/StatCard";
 
 import SkillGapChart from "../components/SkillGapChart";
@@ -25,8 +27,9 @@ import LearningPath from "../components/LearningPath";
 
 import Chatbot from "../components/Chatbot";
 
-
-const USER_ID = 1;
+import {
+  useUser
+} from "../context/UserContext";
 
 
 function Dashboard() {
@@ -43,18 +46,58 @@ function Dashboard() {
   const [loading, setLoading] =
     useState(true);
 
+    // Get currently selected/logged-in user
+    const {
+      user
+    } = useUser();
+    
 
+  const navigate =
+    useNavigate();
+
+
+  // Dynamic user ID
+  const USER_ID =
+    user?.id;
+
+
+  /*
+   * Redirect to login if
+   * no user is selected.
+   */
   useEffect(() => {
+
+    if (!user) {
+
+      navigate("/login");
+
+    }
+
+  }, [user, navigate]);
+
+
+  /*
+   * Load dashboard data
+   * whenever USER_ID changes.
+   */
+  useEffect(() => {
+
+    if (!USER_ID) {
+      return;
+    }
 
     loadDashboard();
 
-  }, []);
+  }, [USER_ID]);
 
 
   const loadDashboard =
     async () => {
 
       try {
+
+        setLoading(true);
+
 
         const [
           profileData,
@@ -92,6 +135,7 @@ function Dashboard() {
           pathData
         );
 
+
       } catch (error) {
 
         console.error(
@@ -104,15 +148,21 @@ function Dashboard() {
         setLoading(false);
 
       }
+
     };
 
 
   if (loading) {
 
     return (
+
       <div className="loading">
-        Loading your personalized dashboard...
+
+        Loading your personalized
+        dashboard...
+
       </div>
+
     );
 
   }
@@ -121,6 +171,8 @@ function Dashboard() {
   return (
 
     <div className="dashboard">
+
+      {/* PAGE HEADER */}
 
       <div className="page-header">
 
@@ -131,10 +183,15 @@ function Dashboard() {
           </p>
 
           <h1>
+
             Welcome back
+
             {profile?.name
               ? `, ${profile.name}`
-              : ""} 👋
+              : ""}
+
+            👋
+
           </h1>
 
           <p>
@@ -147,6 +204,8 @@ function Dashboard() {
       </div>
 
 
+      {/* CURRENT GOAL */}
+
       <div className="goal-banner">
 
         <div>
@@ -156,8 +215,10 @@ function Dashboard() {
           </span>
 
           <h2>
+
             {profile?.goal ||
               "Define your learning goal"}
+
           </h2>
 
         </div>
@@ -169,11 +230,15 @@ function Dashboard() {
       </div>
 
 
+      {/* STATISTICS */}
+
       <div className="stats-grid">
 
         <StatCard
           title="Learning Hours"
-          value={`${path?.total_hours || 0}h`}
+          value={
+            `${path?.total_hours || 0}h`
+          }
           subtitle="Total estimated"
           icon={Clock3}
         />
@@ -191,7 +256,9 @@ function Dashboard() {
 
         <StatCard
           title="Progress"
-          value={`${path?.progress_percentage || 0}%`}
+          value={
+            `${path?.progress_percentage || 0}%`
+          }
           subtitle="Completed"
           icon={TrendingUp}
         />
@@ -199,13 +266,17 @@ function Dashboard() {
 
         <StatCard
           title="Duration"
-          value={`${path?.estimated_weeks || 0}w`}
+          value={
+            `${path?.estimated_weeks || 0}w`
+          }
           subtitle="At your weekly pace"
           icon={Target}
         />
 
       </div>
 
+
+      {/* SKILL GAP + NEXT ACTION */}
 
       <div className="dashboard-grid">
 
@@ -259,26 +330,41 @@ function Dashboard() {
                   <>
 
                     <span className="skill-tag">
+
                       {item.skill_name}
+
                     </span>
 
+
                     <h2>
+
                       {item.course_title}
+
                     </h2>
 
+
                     <p>
+
                       {item.objective}
+
                     </p>
+
 
                     <div className="course-meta">
 
                       <span>
+
                         {item.estimated_hours}
-                        {" "}hours
+                        {" "}
+                        hours
+
                       </span>
 
+
                       <span>
+
                         {item.difficulty}
+
                       </span>
 
                     </div>
@@ -307,10 +393,14 @@ function Dashboard() {
       </div>
 
 
+      {/* LEARNING PATH */}
+
       <LearningPath
         path={path}
       />
 
+
+      {/* AI ASSISTANT */}
 
       <div className="assistant-section">
 
@@ -323,6 +413,8 @@ function Dashboard() {
     </div>
 
   );
+
 }
+
 
 export default Dashboard;

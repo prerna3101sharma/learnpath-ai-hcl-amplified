@@ -9,8 +9,35 @@ import {
 
 import { NavLink } from "react-router-dom";
 
+import {
+  LogOut
+} from "lucide-react";
+
+import {
+  useUser
+} from "../context/UserContext";
+
+import {
+  useNavigate
+} from "react-router-dom";
 
 function Sidebar() {
+   const {
+  user,
+  logoutUser
+} = useUser();
+
+const navigate =
+  useNavigate();
+
+
+const handleLogout = () => {
+
+  logoutUser();
+
+  navigate("/login");
+
+};
 
   const menuItems = [
 
@@ -99,7 +126,13 @@ function Sidebar() {
 
       </nav>
 
-
+        <button
+        className="logout-button"
+        onClick={handleLogout}
+        >
+        <LogOut size={18} />
+        Logout
+        </button>
       <div className="sidebar-footer">
 
         <p>AI-Powered</p>
