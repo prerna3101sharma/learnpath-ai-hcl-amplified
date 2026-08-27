@@ -7,3 +7,4 @@ from app.models.prerequisite import CoursePrerequisite
 from app.models.learning_history import LearningHistory
 from app.models.feedback import LearningFeedback
 from app.models.user_interest import UserInterest
+from app.models.progress import LearningProgress

@@ -44,11 +44,6 @@ class LearningProgress(Base):
         default="Not Started"
     )
 
-    feedback = Column(
-        String,
-        nullable=True
-    )
-
     updated_at = Column(
         DateTime,
         default=datetime.utcnow,

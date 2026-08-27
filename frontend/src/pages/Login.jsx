@@ -2,7 +2,7 @@ import {
   useEffect,
   useState
 } from "react";
-
+import "./Login.css";
 import {
   GraduationCap,
   ArrowRight

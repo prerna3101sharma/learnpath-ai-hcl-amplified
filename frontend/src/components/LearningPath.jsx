@@ -14,120 +14,195 @@ import { useUser } from "../context/UserContext";
 
 import {
   updateProgress,
+  getUserProgress,
   submitFeedback,
 } from "../services/api";
-
 
 function LearningPath() {
   const { user } = useUser();
 
   const [learningPath, setLearningPath] = useState([]);
+  const [progressMap, setProgressMap] = useState({});
+
   const [loading, setLoading] = useState(true);
+  const [progressLoading, setProgressLoading] = useState(true);
+
   const [error, setError] = useState("");
-
   const [expandedItems, setExpandedItems] = useState({});
-
   const [updatingCourse, setUpdatingCourse] = useState(null);
-
   const [feedbackStatus, setFeedbackStatus] = useState({});
 
-
   /*
-   * ---------------------------------------------------------
-   * Fetch Learning Path
-   * ---------------------------------------------------------
+   * =========================================================
+   * LOAD DATA WHEN USER CHANGES
+   * =========================================================
    */
 
   useEffect(() => {
     if (!user?.id) {
+      setLearningPath([]);
+      setProgressMap({});
       setLoading(false);
+      setProgressLoading(false);
       return;
     }
 
-    fetchLearningPath();
+    loadUserData();
   }, [user?.id]);
 
+  /*
+   * =========================================================
+   * LOAD LEARNING PATH + SAVED PROGRESS
+   * =========================================================
+   */
 
-  const fetchLearningPath = async () => {
+  const loadUserData = async () => {
+    setLoading(true);
+    setProgressLoading(true);
+    setError("");
+
     try {
-      setLoading(true);
-      setError("");
-
-      const response = await fetch(
+      /*
+       * Load learning path
+       */
+      const pathResponse = await fetch(
         `http://localhost:8000/api/learning-path/${user.id}`
       );
 
-      if (!response.ok) {
+      if (!pathResponse.ok) {
         throw new Error(
-          `Failed to load learning path (${response.status})`
+          `Failed to load learning path (${pathResponse.status})`
         );
       }
 
-      const data = await response.json();
-
-      /*
-       * Backend may return:
-       *
-       * [
-       *   ...
-       * ]
-       *
-       * OR
-       *
-       * {
-       *   learning_path: [...]
-       * }
-       *
-       * OR
-       *
-       * {
-       *   path: [...]
-       * }
-       */
+      const pathData = await pathResponse.json();
 
       let path = [];
 
-      if (Array.isArray(data)) {
-        path = data;
-      } else if (Array.isArray(data.learning_path)) {
-        path = data.learning_path;
-      } else if (Array.isArray(data.path)) {
-        path = data.path;
-      } else if (Array.isArray(data.items)) {
-        path = data.items;
+      if (Array.isArray(pathData)) {
+        path = pathData;
+      } else if (Array.isArray(pathData.learning_path)) {
+        path = pathData.learning_path;
+      } else if (Array.isArray(pathData.path)) {
+        path = pathData.path;
+      } else if (Array.isArray(pathData.items)) {
+        path = pathData.items;
       }
 
       setLearningPath(path);
 
+      /*
+       * Load progress from database
+       */
+      const progressRecords = await getUserProgress(user.id);
+
+      const mappedProgress = {};
+
+      if (Array.isArray(progressRecords)) {
+        progressRecords.forEach((record) => {
+          const courseId =
+            record.course_id ??
+            record.courseId ??
+            record.resource_id ??
+            record.resourceId;
+
+          const percentage =
+            record.progress_percentage ??
+            record.progress ??
+            0;
+
+          if (courseId !== undefined && courseId !== null) {
+            mappedProgress[Number(courseId)] = Number(percentage);
+          }
+        });
+      }
+
+      setProgressMap(mappedProgress);
+
+      /*
+       * Load saved feedback if backend provides it
+       */
+      const savedFeedback = {};
+
+      if (Array.isArray(progressRecords)) {
+        progressRecords.forEach((record) => {
+          const courseId =
+            record.course_id ??
+            record.courseId ??
+            record.resource_id ??
+            record.resourceId;
+
+          const feedback =
+            record.feedback_type ??
+            record.feedback ??
+            record.feedbackType;
+
+          if (
+            courseId !== undefined &&
+            courseId !== null &&
+            feedback
+          ) {
+            savedFeedback[Number(courseId)] = feedback;
+          }
+        });
+      }
+
+      setFeedbackStatus(savedFeedback);
     } catch (err) {
-      console.error("Learning path error:", err);
+      console.error("Failed to load user data:", err);
 
       setError(
         err.message ||
-        "Unable to load your learning path."
+          "Unable to load your personalized learning path."
       );
-
     } finally {
       setLoading(false);
+      setProgressLoading(false);
     }
   };
 
-
   /*
-   * ---------------------------------------------------------
-   * Normalize course data
-   * ---------------------------------------------------------
+   * =========================================================
+   * NORMALIZE LEARNING PATH
+   * =========================================================
+   *
+   * IMPORTANT:
+   *
+   * progressMap is used here.
+   *
+   * This means:
+   *
+   * Database progress
+   *        ↓
+   * progressMap
+   *        ↓
+   * normalizedPath
+   *        ↓
+   * UI
+   *
+   * Therefore progress remains visible after
+   * navigating between pages.
    */
 
   const normalizedPath = useMemo(() => {
     return learningPath.map((item, index) => {
-
-      const course = item.course || item.resource || item;
+      const course =
+        item.course ||
+        item.resource ||
+        item;
 
       const courseId =
         item.course_id ??
+        item.courseId ??
         course.course_id ??
+        course.courseId ??
         course.id;
+
+      const numericCourseId =
+        courseId !== undefined &&
+        courseId !== null
+          ? Number(courseId)
+          : null;
 
       const title =
         item.title ||
@@ -162,36 +237,61 @@ function LearningPath() {
         course.skills ||
         [];
 
+      /*
+       * FIRST PRIORITY:
+       * Progress loaded from database.
+       *
+       * SECOND PRIORITY:
+       * Progress returned by learning-path API.
+       *
+       * THIRD PRIORITY:
+       * 0
+       */
+
+      const databaseProgress =
+        numericCourseId !== null
+          ? progressMap[numericCourseId]
+          : undefined;
+
+      const apiProgress =
+        item.progress_percentage ??
+        item.progress ??
+        course.progress_percentage ??
+        course.progress ??
+        0;
+
       const progress =
-        Number(
-          item.progress_percentage ??
-          item.progress ??
-          course.progress_percentage ??
-          0
-        );
+        databaseProgress !== undefined
+          ? Number(databaseProgress)
+          : Number(apiProgress);
+
+      const safeProgress = Math.max(
+        0,
+        Math.min(progress, 100)
+      );
 
       const status =
-        item.status ||
-        course.status ||
-        (
-          progress >= 100
-            ? "Completed"
-            : progress > 0
-              ? "In Progress"
-              : "Not Started"
-        );
+        safeProgress >= 100
+          ? "Completed"
+          : safeProgress > 0
+          ? "In Progress"
+          : "Not Started";
 
       return {
         ...item,
 
-        courseId,
+        courseId: numericCourseId,
+
         title,
         description,
         difficulty,
         duration,
         prerequisites,
         skills,
-        progress,
+
+        progress: safeProgress,
+        progress_percentage: safeProgress,
+
         status,
 
         sequence:
@@ -200,19 +300,17 @@ function LearningPath() {
           index + 1,
       };
     });
-  }, [learningPath]);
-
+  }, [learningPath, progressMap]);
 
   /*
-   * ---------------------------------------------------------
-   * Progress statistics
-   * ---------------------------------------------------------
+   * =========================================================
+   * PROGRESS STATISTICS
+   * =========================================================
    */
 
   const completedCount = normalizedPath.filter(
     (item) => item.progress >= 100
   ).length;
-
 
   const overallProgress =
     normalizedPath.length > 0
@@ -223,122 +321,109 @@ function LearningPath() {
         ) / normalizedPath.length
       : 0;
 
-
   /*
-   * ---------------------------------------------------------
-   * Expand / Collapse
-   * ---------------------------------------------------------
+   * =========================================================
+   * EXPAND / COLLAPSE
+   * =========================================================
    */
 
   const toggleExpanded = (index) => {
-
     setExpandedItems((previous) => ({
       ...previous,
       [index]: !previous[index],
     }));
-
   };
 
-
   /*
-   * ---------------------------------------------------------
-   * Update Progress
-   * ---------------------------------------------------------
+   * =========================================================
+   * UPDATE COURSE PROGRESS
+   * =========================================================
    */
 
   const handleProgress = async (
     courseId,
     percentage
   ) => {
-
     if (!user?.id || !courseId) {
       return;
     }
 
     try {
-
       setUpdatingCourse(courseId);
+      setError("");
 
-      await updateProgress(
+      /*
+       * Save to backend/database
+       */
+      const result = await updateProgress(
         user.id,
         courseId,
         percentage
       );
 
       /*
-       * Update UI immediately instead of
-       * forcing a full page reload.
+       * Backend may return the saved percentage.
+       * If it doesn't, use the percentage sent.
        */
 
-      setLearningPath((previous) =>
-        previous.map((item) => {
+      const savedPercentage =
+        Number(
+          result?.progress_percentage ??
+            result?.progress ??
+            percentage
+        );
 
-          const itemCourse =
-            item.course || item.resource || item;
+      /*
+       * IMPORTANT:
+       *
+       * Update progressMap.
+       *
+       * normalizedPath depends on progressMap,
+       * so the UI automatically updates.
+       */
 
-          const itemId =
-            item.course_id ??
-            itemCourse.course_id ??
-            itemCourse.id;
+      setProgressMap((previous) => ({
+        ...previous,
 
-          if (Number(itemId) !== Number(courseId)) {
-            return item;
-          }
-
-          return {
-            ...item,
-            progress_percentage: percentage,
-            progress: percentage,
-            status:
-              percentage >= 100
-                ? "Completed"
-                : percentage > 0
-                  ? "In Progress"
-                  : "Not Started",
-          };
-
-        })
-      );
-
+        [Number(courseId)]: savedPercentage,
+      }));
     } catch (err) {
-
       console.error(
         "Progress update error:",
         err
       );
 
       setError(
-        "Unable to update progress. Please try again."
+        "Unable to save progress. Please try again."
       );
-
     } finally {
-
       setUpdatingCourse(null);
-
     }
   };
 
-
   /*
-   * ---------------------------------------------------------
-   * Feedback
-   * ---------------------------------------------------------
+   * =========================================================
+   * FEEDBACK
+   * =========================================================
    */
 
   const handleFeedback = async (
     courseId,
     feedbackType
   ) => {
-
     if (!user?.id || !courseId) {
       return;
     }
 
     try {
+      setError("");
 
+      /*
+       * Optimistic UI update
+       */
       setFeedbackStatus((previous) => ({
         ...previous,
-        [courseId]: feedbackType,
+        [Number(courseId)]: feedbackType,
       }));
 
       await submitFeedback(
@@ -346,9 +431,7 @@ function LearningPath() {
         courseId,
         feedbackType
       );
-
     } catch (err) {
-
       console.error(
         "Feedback error:",
         err
@@ -357,35 +440,19 @@ function LearningPath() {
       setError(
         "Unable to submit feedback."
       );
-
-      setFeedbackStatus((previous) => {
-
-        const updated = {
-          ...previous,
-        };
-
-        delete updated[courseId];
-
-        return updated;
-      });
-
     }
   };
 
-
   /*
-   * ---------------------------------------------------------
-   * No user selected
-   * ---------------------------------------------------------
+   * =========================================================
+   * NO USER SELECTED
+   * =========================================================
    */
 
   if (!user) {
-
     return (
       <div className="learning-path-container">
-
         <div className="empty-state">
-
           <AlertCircle size={40} />
 
           <h2>
@@ -396,94 +463,74 @@ function LearningPath() {
             Please select a learner profile
             before viewing the learning path.
           </p>
-
         </div>
-
       </div>
     );
-
   }
 
-
   /*
-   * ---------------------------------------------------------
-   * Loading
-   * ---------------------------------------------------------
+   * =========================================================
+   * LOADING
+   * =========================================================
    */
 
   if (loading) {
-
     return (
       <div className="learning-path-container">
-
         <div className="loading-state">
-
           <div className="loading-spinner"></div>
 
           <p>
             Building your personalized
             learning path...
           </p>
-
         </div>
-
       </div>
     );
-
   }
 
-
   /*
-   * ---------------------------------------------------------
-   * Error
-   * ---------------------------------------------------------
+   * =========================================================
+   * ERROR
+   * =========================================================
    */
 
-  if (error && normalizedPath.length === 0) {
-
+  if (
+    error &&
+    normalizedPath.length === 0
+  ) {
     return (
       <div className="learning-path-container">
-
         <div className="error-state">
-
           <AlertCircle size={40} />
 
           <h2>
             Unable to load learning path
           </h2>
 
-          <p>
-            {error}
-          </p>
+          <p>{error}</p>
 
           <button
-            onClick={fetchLearningPath}
+            onClick={loadUserData}
             className="retry-button"
           >
             Try Again
           </button>
-
         </div>
-
       </div>
     );
-
   }
 
-
   /*
-   * ---------------------------------------------------------
-   * Empty learning path
-   * ---------------------------------------------------------
+   * =========================================================
+   * EMPTY PATH
+   * =========================================================
    */
 
   if (normalizedPath.length === 0) {
-
     return (
       <div className="learning-path-container">
-
         <div className="empty-state">
-
           <BookOpen size={48} />
 
           <h2>
@@ -495,31 +542,24 @@ function LearningPath() {
             set a learning goal to generate
             a personalized roadmap.
           </p>
-
         </div>
-
       </div>
     );
-
   }
 
-
   /*
-   * ---------------------------------------------------------
-   * Main UI
-   * ---------------------------------------------------------
+   * =========================================================
+   * MAIN UI
+   * =========================================================
    */
 
   return (
-
     <div className="learning-path-container">
 
-      {/* Header */}
+      {/* HEADER */}
 
       <div className="learning-path-header">
-
         <div>
-
           <p className="page-label">
             PERSONALIZED ROADMAP
           </p>
@@ -533,22 +573,17 @@ function LearningPath() {
             according to your skills, goals
             and learning progress.
           </p>
-
         </div>
-
       </div>
 
-
-      {/* Progress summary */}
+      {/* SUMMARY */}
 
       <div className="path-summary">
 
         <div className="summary-card">
-
           <BookOpen size={22} />
 
           <div>
-
             <span>
               Total Resources
             </span>
@@ -556,18 +591,13 @@ function LearningPath() {
             <strong>
               {normalizedPath.length}
             </strong>
-
           </div>
-
         </div>
 
-
         <div className="summary-card">
-
           <CheckCircle2 size={22} />
 
           <div>
-
             <span>
               Completed
             </span>
@@ -575,85 +605,80 @@ function LearningPath() {
             <strong>
               {completedCount}
             </strong>
-
           </div>
-
         </div>
 
-
         <div className="summary-card">
-
           <Clock3 size={22} />
 
           <div>
-
             <span>
               Overall Progress
             </span>
 
             <strong>
-              {Math.round(overallProgress)}%
+              {Math.round(
+                overallProgress
+              )}
+              %
             </strong>
-
           </div>
-
         </div>
 
       </div>
 
-
-      {/* Overall progress */}
+      {/* OVERALL PROGRESS */}
 
       <div className="overall-progress-card">
 
         <div className="progress-heading">
-
           <span>
             Learning Progress
           </span>
 
           <strong>
-            {Math.round(overallProgress)}%
+            {Math.round(
+              overallProgress
+            )}
+            %
           </strong>
-
         </div>
 
         <div className="progress-track">
-
           <div
             className="progress-fill"
             style={{
-              width:
-                `${Math.min(
-                  overallProgress,
-                  100
-                )}%`,
+              width: `${Math.min(
+                overallProgress,
+                100
+              )}%`,
             }}
           />
-
         </div>
 
       </div>
 
-
-      {/* Error banner */}
+      {/* ERROR BANNER */}
 
       {error && (
-
         <div className="error-banner">
-
           <AlertCircle size={18} />
 
           <span>
             {error}
           </span>
-
         </div>
-
       )}
 
+      {/* DATABASE LOADING */}
 
-      {/* Timeline */}
+      {progressLoading && (
+        <div className="progress-loading-message">
+          Syncing saved learning progress...
+        </div>
+      )}
+
+      {/* TIMELINE */}
 
       <div className="learning-timeline">
 
@@ -676,20 +701,19 @@ function LearningPath() {
                   .slice(0, index)
                   .every(
                     (previous) =>
-                      previous.progress >= 100
+                      previous.progress >=
+                      100
                   )
               );
 
-
             return (
-
               <div
                 className={`timeline-item ${
                   isCompleted
                     ? "completed"
                     : isCurrent
-                      ? "current"
-                      : ""
+                    ? "current"
+                    : ""
                 }`}
                 key={
                   item.courseId ??
@@ -697,28 +721,21 @@ function LearningPath() {
                 }
               >
 
-                {/* Timeline marker */}
+                {/* TIMELINE MARKER */}
 
                 <div className="timeline-marker">
-
                   {isCompleted ? (
-
                     <CheckCircle2
                       size={25}
                     />
-
                   ) : (
-
                     <Circle
                       size={25}
                     />
-
                   )}
-
                 </div>
 
-
-                {/* Course card */}
+                {/* COURSE CARD */}
 
                 <div className="course-card">
 
@@ -730,109 +747,105 @@ function LearningPath() {
                   >
 
                     <div className="course-number">
-
                       {index + 1}
-
                     </div>
-
 
                     <div className="course-content">
 
                       <div className="course-top">
 
                         <span className="course-badge">
-
                           {isCompleted
                             ? "Completed"
                             : isCurrent
-                              ? "Next Recommended"
-                              : `Step ${index + 1}`}
-
+                            ? "Next Recommended"
+                            : `Step ${
+                                index + 1
+                              }`}
                         </span>
 
                         <span className="difficulty-badge">
-
                           {item.difficulty}
-
                         </span>
 
                       </div>
-
 
                       <h3>
                         {item.title}
                       </h3>
 
-
                       <p>
                         {item.description}
                       </p>
 
-
                       <div className="course-meta">
 
                         {item.duration && (
-
                           <span>
-
                             <Clock3
                               size={14}
                             />
 
                             {item.duration}
-                            {typeof item.duration === "number"
+
+                            {typeof item.duration ===
+                            "number"
                               ? " hours"
                               : ""}
-
                           </span>
-
                         )}
 
-
-                        {item.skills &&
-                          item.skills.length > 0 && (
-
+                        {Array.isArray(
+                          item.skills
+                        ) &&
+                          item.skills.length >
+                            0 && (
                             <span>
-
                               <BookOpen
                                 size={14}
                               />
 
                               {item.skills
-                                .slice(0, 3)
-                                .join(", ")}
-
+                                .slice(
+                                  0,
+                                  3
+                                )
+                                .map(
+                                  (
+                                    skill
+                                  ) =>
+                                    typeof skill ===
+                                    "string"
+                                      ? skill
+                                      : skill.name ||
+                                        skill.title ||
+                                        ""
+                                )
+                                .join(
+                                  ", "
+                                )}
                             </span>
-
                           )}
 
                       </div>
 
                     </div>
 
-
                     <div className="expand-icon">
-
                       {isExpanded ? (
-
                         <ChevronUp
                           size={20}
                         />
-
                       ) : (
-
                         <ChevronDown
                           size={20}
                         />
-
                       )}
-
                     </div>
 
                   </div>
 
-
-                  {/* Progress */}
+                  {/* COURSE PROGRESS */}
 
                   <div className="course-progress">
 
@@ -845,22 +858,21 @@ function LearningPath() {
                       <strong>
                         {Math.round(
                           item.progress
-                        )}%
+                        )}
+                        %
                       </strong>
 
                     </div>
-
 
                     <div className="progress-track">
 
                       <div
                         className="progress-fill"
                         style={{
-                          width:
-                            `${Math.min(
-                              item.progress,
-                              100
-                            )}%`,
+                          width: `${Math.min(
+                            item.progress,
+                            100
+                          )}%`,
                         }}
                       />
 
@@ -868,18 +880,19 @@ function LearningPath() {
 
                   </div>
 
-
-                  {/* Expanded details */}
+                  {/* EXPANDED DETAILS */}
 
                   {isExpanded && (
-
                     <div className="course-details">
 
-                      {/* Prerequisites */}
+                      {/* PREREQUISITES */}
 
-                      {item.prerequisites &&
-                        item.prerequisites.length > 0 && (
-
+                      {Array.isArray(
+                        item.prerequisites
+                      ) &&
+                        item.prerequisites
+                          .length >
+                          0 && (
                           <div className="detail-section">
 
                             <h4>
@@ -887,13 +900,11 @@ function LearningPath() {
                             </h4>
 
                             <ul>
-
                               {item.prerequisites.map(
                                 (
                                   prerequisite,
                                   prerequisiteIndex
                                 ) => (
-
                                   <li
                                     key={
                                       prerequisiteIndex
@@ -908,22 +919,20 @@ function LearningPath() {
                                           prerequisite
                                         )}
                                   </li>
-
                                 )
                               )}
-
                             </ul>
 
                           </div>
-
                         )}
 
+                      {/* SKILLS */}
 
-                      {/* Skills */}
-
-                      {item.skills &&
-                        item.skills.length > 0 && (
-
+                      {Array.isArray(
+                        item.skills
+                      ) &&
+                        item.skills.length >
+                          0 && (
                           <div className="detail-section">
 
                             <h4>
@@ -937,7 +946,6 @@ function LearningPath() {
                                   skill,
                                   skillIndex
                                 ) => (
-
                                   <span
                                     key={
                                       skillIndex
@@ -947,20 +955,18 @@ function LearningPath() {
                                     "string"
                                       ? skill
                                       : skill.name ||
-                                        skill.title}
+                                        skill.title ||
+                                        ""}
                                   </span>
-
                                 )
                               )}
 
                             </div>
 
                           </div>
-
                         )}
 
-
-                      {/* Progress actions */}
+                      {/* PROGRESS ACTIONS */}
 
                       <div className="detail-section">
 
@@ -1019,7 +1025,7 @@ function LearningPath() {
                             className="complete-button"
                             disabled={
                               updatingCourse ===
-                              item.courseId ||
+                                item.courseId ||
                               isCompleted
                             }
                             onClick={() =>
@@ -1029,34 +1035,28 @@ function LearningPath() {
                               )
                             }
                           >
-
                             <CheckCircle2
                               size={15}
                             />
 
                             Mark Complete
-
                           </button>
 
                         </div>
 
                       </div>
 
-
-                      {/* Feedback */}
+                      {/* FEEDBACK */}
 
                       <div className="detail-section">
 
                         <h4>
-
                           <MessageSquare
                             size={16}
                           />
 
                           How was this resource?
-
                         </h4>
-
 
                         <div className="feedback-actions">
 
@@ -1092,15 +1092,18 @@ function LearningPath() {
                                 "Not Relevant",
                             },
                           ].map(
-                            (feedback) => (
-
+                            (
+                              feedback
+                            ) => (
                               <button
                                 key={
                                   feedback.value
                                 }
                                 className={
                                   feedbackStatus[
-                                    item.courseId
+                                    Number(
+                                      item.courseId
+                                    )
                                   ] ===
                                   feedback.value
                                     ? "selected"
@@ -1117,7 +1120,6 @@ function LearningPath() {
                                   feedback.label
                                 }
                               </button>
-
                             )
                           )}
 
@@ -1126,24 +1128,19 @@ function LearningPath() {
                       </div>
 
                     </div>
-
                   )}
 
                 </div>
 
               </div>
-
             );
-
           }
         )}
 
       </div>
 
     </div>
-
   );
 }
-
 
 export default LearningPath;

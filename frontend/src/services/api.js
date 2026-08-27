@@ -102,16 +102,27 @@ export const updateProgress = async (
   progressPercentage
 ) => {
 
-  const response =
-    await api.post(
-      "/api/progress",
-      {
-        user_id: userId,
-        course_id: courseId,
-        progress_percentage:
-          progressPercentage
-      }
-    );
+  const response = await api.post(
+    "/api/progress",
+    {
+      user_id: Number(userId),
+      course_id: Number(courseId),
+      progress_percentage:
+        Number(progressPercentage)
+    }
+  );
+
+  return response.data;
+};
+
+
+export const getUserProgress = async (
+  userId
+) => {
+
+  const response = await api.get(
+    `/api/progress/${userId}`
+  );
 
   return response.data;
 };
@@ -138,3 +149,18 @@ export const submitFeedback = async (
 
   return response.data;
 };
+
+export const getAdaptiveRecommendations = async (userId) => {
+
+  const response = await api.get(
+    `/api/adaptive/${userId}`
+  );
+
+  return response.data;
+
+};
+// ============================================================
+// DEFAULT EXPORT
+// ============================================================
+
+export default api;
